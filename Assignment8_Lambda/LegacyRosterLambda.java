@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LegacyRosterLambda {
 // --- Simple domain model ---
@@ -102,45 +103,27 @@ public class LegacyRosterLambda {
      * Return students with GPA >= minGpa AND credits >= minCredits, sorted by
      * last, then first name.
      */
-    public static List<Student> getHonorRoll(List<Student> students, double minGpa,
+        public static List<Student> getHonorRoll(List<Student> students, double minGpa,
             int minCredits) {
-        List<Student> result = new ArrayList<Student>();
-        for (int i = 0; i < students.size(); i++) {
-            Student s = students.get(i);
-            if (s != null) {
-                if (s.getGpa() >= minGpa && s.getCredits() >= minCredits) {
-                    result.add(s);
-                }
+                List<Student> honorRoll = students.stream()
+                .filter(student -> student.gpa >= minGpa && student.credits >= minCredits)
+                .sorted(Comparator.comparing((Student s) -> s.getLastName(), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(s -> s.getFirstName(), String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+                return honorRoll;
             }
-        }
-// Manual sort using anonymous Comparator
-        Collections.sort(result, new Comparator<Student>() {
-            public int compare(Student a, Student b) {
-                int lastCmp = a.getLastName().compareToIgnoreCase(b.getLastName());
-                if (lastCmp != 0) {
-                    return lastCmp;
-                }
-                return a.getFirstName().compareToIgnoreCase(b.getFirstName());
-            }
-        });
-        return result;
-    }
 
     /**
      * Return emails of students in a given major, lowercased and sorted
      * alphabetically.
      */
     public static List<String> getEmailsByMajor(List<Student> students, String major) {
-        List<String> emails = new ArrayList<String>();
-        for (Student s : students) {
-            if (s != null && s.getMajor() != null && s.getEmail() != null) {
-                if (s.getMajor().equalsIgnoreCase(major)) {
-                    emails.add(s.getEmail().toLowerCase());
-                }
-            }
-        }
-        Collections.sort(emails); // natural String order
-        return emails;
+       List<String> emailsMajor = students.stream()
+       .filter(student -> student.major.equals(major))
+       .map(student -> student.getEmail().toLowerCase())
+       .sorted()
+       .collect(Collectors.toList());
+        return emailsMajor;
     }
 
     /**
@@ -154,17 +137,15 @@ public class LegacyRosterLambda {
                 copy.add(s);
             }
         }
-        Collections.sort(copy, new Comparator<Student>() {
-            public int compare(Student a, Student b) {
-                if (b.getGpa() > a.getGpa()) {
-                    return 1;
-                }
-                if (b.getGpa() < a.getGpa()) {
-                    return -1;
-                }
-// tie-breaker by credits
-                return b.getCredits() - a.getCredits();
+        Collections.sort(copy, (Student a, Student b) -> {
+            if (b.getGpa() > a.getGpa()) {
+                return 1;
             }
+            if (b.getGpa() < a.getGpa()) {
+                return -1;
+            }
+// tie-breaker by credits
+return b.getCredits() - a.getCredits();
         });
         List<Student> top = new ArrayList<Student>();
         int limit = Math.min(n, copy.size());

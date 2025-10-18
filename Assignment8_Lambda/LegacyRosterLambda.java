@@ -105,11 +105,15 @@ public class LegacyRosterLambda {
      */
         public static List<Student> getHonorRoll(List<Student> students, double minGpa,
         int minCredits) {
+            // Stream: filter students by GPA and credits, then sort by last and first name
             return students.stream()
-            .filter(student -> student.gpa >= minGpa && student.credits >= minCredits)
-            .sorted(Comparator.comparing((Student s) -> s.getLastName(), String.CASE_INSENSITIVE_ORDER)
-            .thenComparing(s -> s.getFirstName(), String.CASE_INSENSITIVE_ORDER))
-            .collect(Collectors.toList());
+                // Keep only students meeting both criteria
+                .filter(student -> student.gpa >= minGpa && student.credits >= minCredits)
+                // Sort by last name, then first name (case-insensitive)
+                .sorted(Comparator.comparing((Student s) -> s.getLastName(), String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(s -> s.getFirstName(), String.CASE_INSENSITIVE_ORDER))
+                // Collect results into a list
+                .collect(Collectors.toList());
         }
 
     /**
@@ -117,11 +121,16 @@ public class LegacyRosterLambda {
      * alphabetically.
      */
     public static List<String> getEmailsByMajor(List<Student> students, String major) {
+       // Stream: filter by major, map to lowercased emails, sort alphabetically
        return students.stream()
-       .filter(student -> student.major.equals(major))
-       .map(student -> student.getEmail().toLowerCase())
-       .sorted()
-       .collect(Collectors.toList());
+           // Only students in the given major
+           .filter(student -> student.major.equals(major))
+           // Convert emails to lowercase
+           .map(student -> student.getEmail().toLowerCase())
+           // Sort emails alphabetically
+           .sorted()
+           // Collect to list
+           .collect(Collectors.toList());
     }
 
     /**
@@ -129,23 +138,31 @@ public class LegacyRosterLambda {
      * (descending).
      */
     public static List<Student> getTopNByGpa(List<Student> students, int n) {
+        // Stream: filter, sort by GPA/credits descending, limit to top N
         return students.stream()
-        .filter(student -> student.gpa > 0)
-        .sorted(Comparator.comparingDouble(Student :: getGpa)
-        .thenComparing(Student :: getCredits)
-        .reversed())
-        .limit(n)
-        .collect(Collectors.toList());
+            // Only students with positive GPA
+            .filter(student -> student.gpa > 0)
+            // Sort by GPA descending, then credits descending
+            .sorted(Comparator.comparingDouble(Student::getGpa).reversed()
+                .thenComparing(Comparator.comparingInt(Student::getCredits).reversed()))
+            // Take only the top N
+            .limit(n)
+            // Collect to list
+            .collect(Collectors.toList());
     }
 // tie-breaker by credits
     /**
      * Compute average GPA across all students; returns 0.0 if list is empty.
      */
     public static double getAverageGpa(List<Student> students) {
+        // Stream: map to GPA values, compute average, default to 0.0 if empty
         return students.stream()
-        .mapToDouble(Student :: getGpa)
-        .average()
-        .orElse(0.0);
+            // Extract GPA as double
+            .mapToDouble(Student::getGpa)
+            // Compute average
+            .average()
+            // Return 0.0 if no students
+            .orElse(0.0);
     }
 
     /**
@@ -153,24 +170,37 @@ public class LegacyRosterLambda {
      * found.
      */
     public static Student findById(List<Student> students, String id) {
+        // Stream: find the first student with matching ID (case-sensitive)
         return students.stream()
-       .filter(student -> student != null && student.getId() != null)
-       .filter(student -> student.getId().equals(id))
-       .findFirst()
-       .orElse(null);
+            // Filter out null students and null IDs
+            .filter(student -> student != null && student.getId() != null)
+            // Match the given ID
+            .filter(student -> student.getId().equals(id))
+            // Return the first match, or null if not found
+            .findFirst()
+            .orElse(null);
     }
     
     /**
      * Return a sorted list of distinct course titles across all students.
      */
     public static List<String> getDistinctCourseTitles(List<Student> students) {
+        // Stream: flatten all course lists, extract titles, deduplicate and sort
         return students.stream()
-        .filter(student -> student != null && student.getCourses() != null)
-        .flatMap(student -> student.getCourses().stream())
-        .filter(course -> course != null && course.getTitle() != null)
-        .map(Course :: getTitle)
-        .distinct()
-        .sorted().collect(Collectors.toList());
+            // Filter out students with no courses
+            .filter(student -> student != null && student.getCourses() != null)
+            // Flatten all students' course lists into one stream
+            .flatMap(student -> student.getCourses().stream())
+            // Filter out null courses and null titles
+            .filter(course -> course != null && course.getTitle() != null)
+            // Extract course titles
+            .map(Course::getTitle)
+            // Remove duplicates
+            .distinct()
+            // Sort alphabetically
+            .sorted()
+            // Collect to list
+            .collect(Collectors.toList());
     }
 // --- Demo data and output ---
 
@@ -181,6 +211,7 @@ public class LegacyRosterLambda {
         Course csc372 = new Course("CSC-372", "Generative AI");
         Course mat250 = new Course("MAT-250", "Discrete Math");
         Course se310 = new Course("SE-310", "Software Engineering");
+
 // Sample students
         List<Student> roster = new ArrayList<Student>();
         List<Course> aCourses = new ArrayList<Course>();
@@ -211,18 +242,23 @@ public class LegacyRosterLambda {
 // Honor roll (GPA >= 3.5 and credits >= 60), sorted by last/first
         System.out.println("Honor Roll:");
         getHonorRoll(roster, 3.5, 60).forEach(s -> System.out.println(" - " + s));
+
 // Emails by major (lowercased, sorted)
         System.out.println("\nCS Emails (sorted):");
         getEmailsByMajor(roster, "CS").forEach(e -> System.out.println(" - " + e));
+
 // Top 3 by GPA
         System.out.println("\nTop 3 by GPA:");
         getTopNByGpa(roster, 3).forEach(s -> System.out.println(" - " + s));
+
 // Average GPA
         double avg = getAverageGpa(roster);
         System.out.println("\nAverage GPA: " + String.format("%.3f", avg));
+
 // Find by ID
         Student found = findById(roster, "A003");
         System.out.println("\nfindById('A003'): " + (found == null ? "not found" : found.toString()));
+
 // Distinct course titles across roster
         System.out.println("\nDistinct course titles (sorted, case-insensitive):");
         getDistinctCourseTitles(roster).forEach(t -> System.out.println(" - " + t));

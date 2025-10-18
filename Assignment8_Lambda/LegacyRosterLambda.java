@@ -132,9 +132,9 @@ public class LegacyRosterLambda {
         return students.stream()
         .filter(student -> student.gpa > 0)
         .sorted(Comparator.comparingDouble(Student :: getGpa)
-        .reversed()
         .thenComparing(Student :: getCredits)
         .reversed())
+        .limit(n)
         .collect(Collectors.toList());
     }
 // tie-breaker by credits
@@ -164,27 +164,13 @@ public class LegacyRosterLambda {
      * Return a sorted list of distinct course titles across all students.
      */
     public static List<String> getDistinctCourseTitles(List<Student> students) {
-        HashSet<String> seen = new HashSet<String>();
-        for (Student s : students) {
-            if (s != null && s.getCourses() != null) {
-                List<Course> cs = s.getCourses();
-                for (int i = 0; i < cs.size(); i++) {
-                    Course c = cs.get(i);
-                    if (c != null && c.getTitle() != null) {
-                        if (!seen.contains(c.getTitle())) {
-                            seen.add(c.getTitle());
-                        }
-                    }
-                }
-            }
-        }
-        List<String> titles = new ArrayList<String>(seen);
-        Collections.sort(titles, new Comparator<String>() {
-            public int compare(String a, String b) {
-                return a.compareToIgnoreCase(b);
-            }
-        });
-        return titles;
+        return students.stream()
+        .filter(student -> student != null && student.getCourses() != null)
+        .flatMap(student -> student.getCourses().stream())
+        .filter(course -> course != null && course.getTitle() != null)
+        .map(Course :: getTitle)
+        .distinct()
+        .sorted().collect(Collectors.toList());
     }
 // --- Demo data and output ---
 
@@ -221,36 +207,24 @@ public class LegacyRosterLambda {
                 "jolie.barger@univ.edu", bCourses));
         roster.add(new Student("A006", "Sravani", "Kadiyala", "SE", 3.55, 72,
                 "sravani.k@univ.edu", cCourses));
+
 // Honor roll (GPA >= 3.5 and credits >= 60), sorted by last/first
-        List<Student> honor = getHonorRoll(roster, 3.5, 60);
         System.out.println("Honor Roll:");
-        for (Student s : honor) {
-            System.out.println(" - " + s);
-        }
+        getHonorRoll(roster, 3.5, 60).forEach(s -> System.out.println(" - " + s));
 // Emails by major (lowercased, sorted)
-        List<String> csEmails = getEmailsByMajor(roster, "CS");
         System.out.println("\nCS Emails (sorted):");
-        for (String e : csEmails) {
-            System.out.println(" - " + e);
-        }
+        getEmailsByMajor(roster, "CS").forEach(e -> System.out.println(" - " + e));
 // Top 3 by GPA
-        List<Student> top3 = getTopNByGpa(roster, 3);
         System.out.println("\nTop 3 by GPA:");
-        for (Student s : top3) {
-            System.out.println(" - " + s);
-        }
+        getTopNByGpa(roster, 3).forEach(s -> System.out.println(" - " + s));
 // Average GPA
         double avg = getAverageGpa(roster);
         System.out.println("\nAverage GPA: " + String.format("%.3f", avg));
 // Find by ID
         Student found = findById(roster, "A003");
-        System.out.println("\nfindById('A003'): " + (found == null ? "not found"
-                : found.toString()));
+        System.out.println("\nfindById('A003'): " + (found == null ? "not found" : found.toString()));
 // Distinct course titles across roster
-        List<String> titles = getDistinctCourseTitles(roster);
         System.out.println("\nDistinct course titles (sorted, case-insensitive):");
-        for (String t : titles) {
-            System.out.println(" - " + t);
-        }
+        getDistinctCourseTitles(roster).forEach(t -> System.out.println(" - " + t));
     }
 }

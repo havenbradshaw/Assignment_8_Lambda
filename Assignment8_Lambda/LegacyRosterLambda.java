@@ -104,26 +104,24 @@ public class LegacyRosterLambda {
      * last, then first name.
      */
         public static List<Student> getHonorRoll(List<Student> students, double minGpa,
-            int minCredits) {
-                List<Student> honorRoll = students.stream()
-                .filter(student -> student.gpa >= minGpa && student.credits >= minCredits)
-                .sorted(Comparator.comparing((Student s) -> s.getLastName(), String.CASE_INSENSITIVE_ORDER)
-                .thenComparing(s -> s.getFirstName(), String.CASE_INSENSITIVE_ORDER))
-                .collect(Collectors.toList());
-                return honorRoll;
-            }
+        int minCredits) {
+            return students.stream()
+            .filter(student -> student.gpa >= minGpa && student.credits >= minCredits)
+            .sorted(Comparator.comparing((Student s) -> s.getLastName(), String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(s -> s.getFirstName(), String.CASE_INSENSITIVE_ORDER))
+            .collect(Collectors.toList());
+        }
 
     /**
      * Return emails of students in a given major, lowercased and sorted
      * alphabetically.
      */
     public static List<String> getEmailsByMajor(List<Student> students, String major) {
-       List<String> emailsMajor = students.stream()
+       return students.stream()
        .filter(student -> student.major.equals(major))
        .map(student -> student.getEmail().toLowerCase())
        .sorted()
        .collect(Collectors.toList());
-        return emailsMajor;
     }
 
     /**
@@ -131,49 +129,23 @@ public class LegacyRosterLambda {
      * (descending).
      */
     public static List<Student> getTopNByGpa(List<Student> students, int n) {
-        List<Student> copy = new ArrayList<Student>();
-        for (Student s : students) {
-            if (s != null) {
-                copy.add(s);
-            }
-        }
-        Collections.sort(copy, (Student a, Student b) -> {
-            if (b.getGpa() > a.getGpa()) {
-                return 1;
-            }
-            if (b.getGpa() < a.getGpa()) {
-                return -1;
-            }
-// tie-breaker by credits
-return b.getCredits() - a.getCredits();
-        });
-        List<Student> top = new ArrayList<Student>();
-        int limit = Math.min(n, copy.size());
-        for (int i = 0; i < limit; i++) {
-            top.add(copy.get(i));
-        }
-        return top;
+        return students.stream()
+        .filter(student -> student.gpa > 0)
+        .sorted(Comparator.comparingDouble(Student :: getGpa)
+        .reversed()
+        .thenComparing(Student :: getCredits)
+        .reversed())
+        .collect(Collectors.toList());
     }
-
+// tie-breaker by credits
     /**
      * Compute average GPA across all students; returns 0.0 if list is empty.
      */
     public static double getAverageGpa(List<Student> students) {
-        if (students == null || students.isEmpty()) {
-            return 0.0;
-        }
-        double total = 0.0;
-        int count = 0;
-        for (Student s : students) {
-            if (s != null) {
-                total += s.getGpa();
-                count++;
-            }
-        }
-        if (count == 0) {
-            return 0.0;
-        }
-        return total / count;
+        return students.stream()
+        .mapToDouble(Student :: getGpa)
+        .average()
+        .orElse(0.0);
     }
 
     /**
@@ -181,19 +153,13 @@ return b.getCredits() - a.getCredits();
      * found.
      */
     public static Student findById(List<Student> students, String id) {
-        if (id == null) {
-            return null;
-        }
-        for (Student s : students) {
-            if (s != null && s.getId() != null) {
-                if (s.getId().equals(id)) {
-                    return s;
-                }
-            }
-        }
-        return null;
+        return students.stream()
+       .filter(student -> student != null && student.getId() != null)
+       .filter(student -> student.getId().equals(id))
+       .findFirst()
+       .orElse(null);
     }
-
+    
     /**
      * Return a sorted list of distinct course titles across all students.
      */
